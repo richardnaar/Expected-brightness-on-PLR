@@ -122,7 +122,7 @@ fit <- lmer(ReactionTime ~ WhichStim + condition + KeyOrder + EST + gender + sub
 
 summary(fit)
 
-#library(sjPlot)
+library(sjPlot)
 
 print("Forest-plot of standardized beta values...")
 plot_model(fit, type = c("std"))
@@ -228,6 +228,8 @@ library(lmerTest)
 fit <- lmer(pupilMean ~ WhichStim + pre_post + predict + timeWindow + (1|subid), data=all_data)
 
 summary(fit)
+
+#library(sjPlot)
 
 print("Forest-plot of standardized beta values...")
 plot_model(fit, type = c("std"))
