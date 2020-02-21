@@ -4,10 +4,10 @@
 ##---------------------------------------------------------------------------------------------------##
 ##---------------------------------------------------------------------------------------------------##
 
-print("Navigating to the data folder")
+cat(inverse("Navigating to the data folder...\n"))
 setwd('C:/Users/Richard Naar/Documents/dok/vision/pupil/PAPER/Analysis/Pupil_R_data')
 
-print("Loding (and installing if nessesary) the packages used in the pipeline...")
+cat(inverse("Loding (and installing if nessesary) the packages used in the pipeline...\n"))
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load("Rmisc", "ggplot2", "quickpsy", "ez", "plyr", "reshape", "ggplot2", "quickpsy", "ez", "nlme", "psycho", + 
                "sjPlot", "ggpubr", "readr", "crayon")
@@ -15,13 +15,12 @@ pacman::p_load("Rmisc", "ggplot2", "quickpsy", "ez", "plyr", "reshape", "ggplot2
 ##--------------------------------------------RT ANALYSIS--------------------------------------------##
 
 # import raw data
-rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n")) # print("Loading the data..."); 
+rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n"))
 summary(rd)
 
 
 
 # define two columns based on the cue
-#print("Defining new variables: cond (w,b,rnd), cond2 (w,b,rndv,rndb), and order (trial progression)...")
 cat(inverse("Defining new variables: cond (w,b,rnd), cond2 (w,b,rndv,rndb), and order (trial progression)...\n"))
 for (ij in 1:length(rd$subid)) {
   if (rd$WhichCue[ij] == 132 || rd$WhichCue[ij] == 231) {
@@ -63,7 +62,6 @@ for (ij in 1:length(unique(rd$subid))) {
 
 }
 
-#print("Removing too slow or too fast RTs and incorrect trials...")
 cat(inverse("Removing too slow or too fast RTs and incorrect trials...\n"))
 nTrials = nrow(rd)
 rd <- subset(rd, ReactionTime > 100) # Mora-Cortes, Ridderinkhof, & Cohen (2018) - cut-off
@@ -86,16 +84,13 @@ for (ij in 1:length(unique(rd$cond))){
 
 rd <- rd2; remove(rd2, data)
 
-#print(paste('Proportion of trials left out:', round( 100-(nrow(rd)*100)/nTrials,2), "%" ))
 cat(inverse(paste('Proportion of trials left out:', round( 100-(nrow(rd)*100)/nTrials,2), "%\n" )))
 
 rd$order <- as.numeric(rd$order)
 
-#print("Taking condition averages...")
 cat(inverse("Taking condition averages...\n"))
 rdm <- summarySE(rd, measurevar="ReactionTime", groupvars=c("cond2", "order")) # 
 
-#print("... and plotting.")
 cat(inverse("... and plotting.\n"))
 
 ggplot(rdm, aes(x=order, y=ReactionTime, group = cond2, color=cond2)) + #  , group=subid, color=subid
@@ -123,7 +118,6 @@ ggplot(rdm, aes(x=order, y=ReactionTime, group = cond2, color=cond2)) + #  , gro
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
 
 # lmer
-#print("Fitting Linerar Mixed-Effects Models")
 cat(inverse("Fitting Linerar Mixed-Effects Models\n"))
 
 fit <- lmer(ReactionTime ~ WhichStim + condition + KeyOrder + EST + gender + subage + (1|subid), data=rd)
@@ -132,21 +126,17 @@ summary(fit)
 
 library(sjPlot)
 
-#print("Forest-plot of standardized beta values...")
 cat(inverse("Forest-plot of standardized beta values...\n"))
 plot_model(fit, type = c("std"))
 
 
-#print("Comparison between predicted compared to non-predicted...")
 cat(inverse("Comparison between predicted compared to non-predicted...\n"))
 pairwise.t.test(rd$ReactionTime, rd$condition, p.adjust.method="BH", paired=F)
 
-#print("Comparison between men and women...")
 cat(inverse("Comparison between men and women...\n"))
 pairwise.t.test(rd$ReactionTime, rd$gender, p.adjust.method="BH", paired=F)
 
 
-#print("Coputing averages over age and plotting...")
 cat(inverse("Coputing averages over age and plotting...\n"))
 agem <- summarySE(rd, measurevar="ReactionTime", groupvars=c("subage")) # 
 
@@ -164,8 +154,6 @@ ggscatter(agem, x = "subage", y = "ReactionTime",
 fb <- summarySE(rd, measurevar="feedback", groupvars=c("condition")) # , "subid"
 cat(inverse(paste("Note: participants got feedback almost exclucively in the 'predicted' condition: ", +
                     round(fb$feedback[1],2)*100, "% vs", round(fb$feedback[2],2)*100, "%\n" )))
-#print( paste("Note: participants got feedback almost exclucively in the 'predicted' condition: ", +
-#             round(fb$feedback[1],2)*100, "% vs", round(fb$feedback[2],2)*100, "%" ) )
 
 ##---------------------------------------------PUPIL ANALYSIS----------------------------------------##
 cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data.csv")
@@ -173,7 +161,6 @@ cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data.csv")
 View(pupil_data)
 
 cat(inverse("WARNING: May not work properly if the lines of code before the message 'Proportion of trials left out...' not run yet."))
-#print("WARNING: May not work properly if the lines of code before the message 'Proportion of trials left out...' not run yet.\n")
 for (ij in 1:length(rd$subid)) {
   rd$subid[ij] <- paste(c('PLR', rd$subid[ij]),collapse = "")
 }
@@ -183,7 +170,6 @@ cols = c("subid","trialNumber"); inds = which(colnames(rd)%in%cols); rd[inds] <-
 inds = which(colnames(pupil_data)%in%cols); pupil_data[inds] <- lapply(pupil_data[inds], factor)
 
 cat(inverse("Merging pupil data with RT data...\n"))
-#print("Merging pupil data with RT data...")
 all_data <- transform( merge(pupil_data, rd, by=c('subid', 'trialNumber')) )
 #df_merged <- merge(pupil_data,rd, by = c('subid', 'trialNumber'), all=FALSE) # by = c('subid', 'trialNumber')
 
@@ -205,7 +191,6 @@ all_data <- all_data
 all_data$predict <- all_data$cond2
 all_data$predict <- revalue(all_data$predict, c("Anticipated black" = "Anticipated", "Anticipated white" = "Anticipated", "Unexpected" = "Unexpected"))
 
-#print("Taking condition averages and plotting...")
 cat(inverse("Taking condition averages and plotting...\n"))
 
 dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "cond_pre_post")) # , "subid"
@@ -247,7 +232,6 @@ summary(fit)
 
 #library(sjPlot)
 
-#print("Forest-plot of standardized beta values...")
 cat(inverse("Forest-plot of standardized beta values...\n"))
 plot_model(fit, type = c("std"))
 
