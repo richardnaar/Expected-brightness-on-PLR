@@ -12,7 +12,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load("Rmisc", "ggplot2", "quickpsy", "ez", "plyr", "reshape", "ggplot2", "quickpsy", "ez", "nlme", "psycho", + 
                "sjPlot", "ggpubr", "readr", "crayon")
 
-##--------------------------------------------RT ANALYSIS--------------------------------------------##
+cat(bgGreen("---------------------------------RT ANALYSIS-----------------------------------------\n"))
 
 # import raw data
 rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n"))
@@ -155,7 +155,8 @@ fb <- summarySE(rd, measurevar="feedback", groupvars=c("condition")) # , "subid"
 cat(inverse(paste("Note: participants got feedback almost exclucively in the 'predicted' condition: ", +
                     round(fb$feedback[1],2)*100, "% vs", round(fb$feedback[2],2)*100, "%\n" )))
 
-##---------------------------------------------PUPIL ANALYSIS----------------------------------------##
+cat(bgGreen("----------------------------------PUPIL ANALYSIS----------------------------------------\n"))
+
 cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data.csv")
 
 View(pupil_data)
