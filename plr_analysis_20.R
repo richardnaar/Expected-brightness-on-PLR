@@ -4,6 +4,7 @@
 ##---------------------------------------------------------------------------------------------------##
 ##---------------------------------------------------------------------------------------------------##
 
+library(crayon)
 cat(inverse("Navigating to the data folder...\n"))
 setwd('C:/Users/Richard Naar/Documents/dok/vision/pupil/PAPER/Analysis/Pupil_R_data')
 
@@ -18,6 +19,22 @@ cat(bgGreen("---------------------------------RT ANALYSIS-----------------------
 rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n"))
 summary(rd)
 
+
+for (ij in 1:length(rd$subid)) {
+  if (rd$KeyOrder[ij] ==  1) {#  
+    
+    if (rd$WhichCue[ij] == 132){
+      rd$WhichCue[ij] = 231
+    } else if (rd$WhichCue[ij] == 231){
+      rd$WhichCue[ij] = 132
+    } else if (rd$WhichCue[ij] == 182){
+      rd$WhichCue[ij] = 281
+    } else if (rd$WhichCue[ij] == 281){
+      rd$WhichCue[ij] = 182
+    }
+    
+  } 
+}
 
 
 # define two columns based on the cue
@@ -37,6 +54,7 @@ for (ij in 1:length(rd$subid)) {
     
   }
 }
+
 
 # define new column 'order' based on the trial number
 gg=0 # keeps track of all the iterations
@@ -98,6 +116,7 @@ ggplot(rdm, aes(x=order, y=ReactionTime, group = cond2, color=cond2)) + #  , gro
   geom_line(size=1.3, position=position_dodge(.5)) +
   geom_point(size=3, position=position_dodge(.5)) +
   scale_colour_hue(l=30)  + 
+#  facet_wrap(~ WhichStim) +
   theme_bw()+
   theme(
     plot.background = element_blank()
@@ -113,21 +132,25 @@ ggplot(rdm, aes(x=order, y=ReactionTime, group = cond2, color=cond2)) + #  , gro
   theme(text = element_text(size=12)) +
   ylab("Reaction Time") +
   xlab("Trials completed") +
-  expand_limits(y=c(150, 600)) + 
+  ylim(c(0, 1000)) +
+  #expand_limits(y=c(150, 600)) + 
   theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
 
 # lmer
 cat(inverse("Fitting Linerar Mixed-Effects Models\n"))
 
-fit <- lmer(ReactionTime ~ WhichStim + condition + KeyOrder + EST + gender + subage + (1|subid), data=rd)
+library(lmerTest)
+#fit <- lmer(ReactionTime ~ WhichStim + condition + KeyOrder + EST + gender + subage + (1|subid), data=rd)
+fit <- lmer(ReactionTime ~ as.factor(WhichStim) + as.factor(WhichCue) + (1|subid), data=rd)
+
 
 summary(fit)
 
 library(sjPlot)
 
 cat(inverse("Forest-plot of standardized beta values...\n"))
-plot_model(fit, type = c("std"))
+plot_model(fit, type = c("eff"))
 
 
 cat(inverse("Comparison between predicted compared to non-predicted...\n"))
@@ -157,7 +180,9 @@ cat(inverse(paste("Note: participants got feedback almost exclucively in the 'pr
 
 cat(bgGreen("----------------------------------PUPIL ANALYSIS----------------------------------------\n"))
 
-cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data.csv")
+cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data_wins_no_baseline.csv") #data, data_wins, data_wins_no_baseline
+
+pupil_data$condition <- NULL # there is already a column named condition in the rd data frame
 
 View(pupil_data)
 
@@ -182,12 +207,16 @@ all_data <- reshape(all_data, varying=cnames, direction="long", idvar=c('subid',
 pupind <- grep('window',names(all_data)); names(all_data)[pupind] <- "pupilMean";
 
 
-all_data <- all_data
-
-
- for (ij in 1:length(all_data$subid)) {
+all_data$timeWindow <- as.numeric(all_data$timeWindow)
+ for (ij in 1:nrow(all_data)) {
   all_data$cond_pre_post[ij] <- paste(c(all_data$cond2[ij] ,all_data$pre_post[ij]), collapse = " ")
+  if (all_data$timeWindow[ij] < 11){
+    all_data$winCat[ij] = 'before event'
+  } else {
+    all_data$winCat[ij] = 'after event'
+  }
  }
+
 
 all_data$predict <- all_data$cond2
 all_data$predict <- revalue(all_data$predict, c("Anticipated black" = "Anticipated", "Anticipated white" = "Anticipated", "Unexpected" = "Unexpected"))
@@ -222,14 +251,26 @@ ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = cond_pre_post, color=cond_pr
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
 
 
-cols = c("timeWindow", "pre_post", "WhichStim", "predict"); inds = which(colnames(all_data)%in%cols); all_data[inds] <- lapply(all_data[inds], factor)
+cols = c("timeWindow", "pre_post", "WhichStim", "predict", "WhichCue"); inds = which(colnames(all_data)%in%cols); all_data[inds] <- lapply(all_data[inds], factor)
 
 # lmer
 
+all_data <- subset(all_data, winCat == "before event")
+
 library(lmerTest)
-fit <- lmer(pupilMean ~ WhichStim + pre_post + predict + timeWindow + (1|subid), data=all_data)
+fit <- lmer(pupilMean ~  WhichStim * predict * pre_post * timeWindow +  (1|subid) + (1|baseline), 
+            data=all_data %>% mutate(pre_post = relevel(pre_post, "pre")))
+
+#fit <- lmer(pupilMean ~  WhichStim * predict * pre_post2 * timeWindow +  (1|subid) + (1|baseline), 
+#            data=all_data )
+
 
 summary(fit)
+
+plot_model(fit, type = "eff", terms = c("timeWindow", "WhichStim", "pre_post", "predict"))
+#plot_model(fit, type = "eff", terms = c("timeWindow", "WhichStim", "pre_post2", "predict"))
+
+
 
 #library(sjPlot)
 
