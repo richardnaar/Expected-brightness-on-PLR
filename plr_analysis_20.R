@@ -19,22 +19,6 @@ cat(bgGreen("---------------------------------RT ANALYSIS-----------------------
 rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n"))
 #summary(rd)
 
-# the meaning of the cue depended on KeyOrder
-for (ij in 1:length(rd$subid)) {
-  if (rd$KeyOrder[ij] ==  1) {#  
-    
-    if (rd$WhichCue[ij] == 132){
-      rd$WhichCue[ij] = 231
-    } else if (rd$WhichCue[ij] == 231){
-      rd$WhichCue[ij] = 132
-    } else if (rd$WhichCue[ij] == 182){
-      rd$WhichCue[ij] = 281
-    } else if (rd$WhichCue[ij] == 281){
-      rd$WhichCue[ij] = 182
-    }
-    
-  } 
-}
 
 cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data_wins.csv") #data, data_wins, data_wins_no_baseline
 pupil_data$feedback <- NULL # this already exists in rd 
@@ -73,6 +57,29 @@ for (ij in 1:length(all_data$subid)) {
   }
 }
 
+# cue lables were counterbalanced
+for (ij in 1:length(all_data$subid)) {
+  
+   if ( (all_data$condition[ij] == 'unexpected_b') ){
+    all_data$WhichCue[ij] = 281
+  } else if ( (all_data$condition[ij] == 'unexpected_w') ){
+    all_data$WhichCue[ij] = 182
+  }
+  
+  if (all_data$KeyOrder[ij] ==  1) {#  
+    
+    if (all_data$WhichCue[ij] == 132){
+      all_data$WhichCue[ij] = 231
+    } else if (all_data$WhichCue[ij] == 231){
+      all_data$WhichCue[ij] = 132
+    } 
+    
+  } 
+}
+
+
+
+cols = c("timeWindow", "pre_post", "predict", "condition", "bgcol", "WhichCue"); inds = which(colnames(all_data)%in%cols); all_data[inds] <- lapply(all_data[inds], factor)
 
 
 cat(inverse("Removing too slow or too fast RTs and incorrect trials...\n"))
@@ -104,6 +111,8 @@ all_data$trialprogl <- as.numeric(all_data$trialprog)
 cat(inverse("Taking condition averages...\n"))
 
 rdm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "trialprog")) # 
+#rdm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("WhichCue", "trialprog")) # 
+
 
 cat(inverse("... and plotting.\n"))
 
@@ -191,10 +200,11 @@ ifelse(all_data$timeWindow[ij] < 11, all_data$winCat[ij] <- 'before event', all_
 
 cat(inverse("Taking condition averages and plotting...\n"))
 
-dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "condition")) # , "subid"
+dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "cond")) # , "subid"
+dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "WhichCue")) # , "subid"
 
 
-ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = condition, color=condition, shape=condition)) + #  , group=subid, color=subid
+ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = WhichCue, color=WhichCue, shape=WhichCue)) + #  , group=subid, color=subid
   geom_errorbar(aes(ymin=pupilMean-ci, ymax=pupilMean+ci), width=.3, size= 1, position=position_dodge(.15)) + 
   geom_line(size=1.8, position=position_dodge(.15)) +
   geom_point(size=3.5, position=position_dodge(.15)) +
@@ -218,9 +228,6 @@ ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = condition, color=condition, 
   xlab("Analysis Windows") +
   theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
-
-
-cols = c("timeWindow", "pre_post", "predict", "condition", "bgcol"); inds = which(colnames(all_data)%in%cols); all_data[inds] <- lapply(all_data[inds], factor)
 
 # lmer
 
