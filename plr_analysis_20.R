@@ -18,9 +18,13 @@ cat(bgGreen("---------------------------------RT ANALYSIS-----------------------
 # import raw data
 rd <- read.delim("pupil_rt.txt"); cat(inverse("Loading the data...\n"))
 #summary(rd)
+rd$WhichStim <- NULL
+
+# data wins
+cat(inverse("Loading the data...\n"))
+pupil_data <- read_csv("data_in_wins.csv") #data_in_many_wins, data_wins_no_baseline
 
 
-cat(inverse("Loading the data...\n")); pupil_data <- read_csv("data_wins.csv") #data, data_wins, data_wins_no_baseline
 pupil_data$feedback <- NULL # this already exists in rd 
 
 #View(pupil_data)
@@ -57,22 +61,19 @@ for (ij in 1:length(all_data$subid)) {
   }
 }
 
-# cue lables were counterbalanced
+
 for (ij in 1:length(all_data$subid)) {
-  
-   if ( (all_data$condition[ij] == 'unexpected_b') ){
-    all_data$WhichCue[ij] = 281
-  } else if ( (all_data$condition[ij] == 'unexpected_w') ){
-    all_data$WhichCue[ij] = 182
-  }
-  
   if (all_data$KeyOrder[ij] ==  1) {#  
     
     if (all_data$WhichCue[ij] == 132){
       all_data$WhichCue[ij] = 231
     } else if (all_data$WhichCue[ij] == 231){
       all_data$WhichCue[ij] = 132
-    } 
+    } else if (all_data$WhichCue[ij] == 182){
+      all_data$WhichCue[ij] = 281
+    } else if (all_data$WhichCue[ij] == 281){
+      all_data$WhichCue[ij] = 182
+    }
     
   } 
 }
@@ -84,7 +85,7 @@ cols = c("timeWindow", "pre_post", "predict", "condition", "bgcol", "WhichCue");
 
 cat(inverse("Removing too slow or too fast RTs and incorrect trials...\n"))
 nTrials = nrow(all_data)
-all_data <- subset(all_data, ReactionTime > 100) # Mora-Cortes, Ridderinkhof, & Cohen (2018) - cut-off
+# all_data <- subset(all_data, ReactionTime > 100) # Mora-Cortes, Ridderinkhof, & Cohen (2018) - cut-off
 all_data <- subset(all_data, correct == '1')
 
 #all_data <- subset(rd, ReactionTime < 1500)
@@ -111,7 +112,7 @@ all_data$trialprogl <- as.numeric(all_data$trialprog)
 cat(inverse("Taking condition averages...\n"))
 
 rdm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "trialprog")) # 
-#rdm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("WhichCue", "trialprog")) # 
+#rdm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("WhichCue", "bgcol", "pre_post2")) # 
 
 
 cat(inverse("... and plotting.\n"))
@@ -121,7 +122,7 @@ ggplot(rdm, aes(x=trialprog, y=ReactionTime, group = cond, color=cond)) + #  , g
   geom_line(size=1.3, position=position_dodge(.5)) +
   geom_point(size=3, position=position_dodge(.5)) +
   scale_colour_hue(l=30)  + 
-#  facet_wrap(~ WhichStim) +
+#  facet_wrap(~ pre_post2) +
   theme_bw()+
   theme(
     plot.background = element_blank()
@@ -131,23 +132,66 @@ ggplot(rdm, aes(x=trialprog, y=ReactionTime, group = cond, color=cond)) + #  , g
   theme(axis.ticks = element_line(size = 2), 
         legend.text = element_text(size = 12)) +
   theme(legend.title=element_blank()) +
-  theme(legend.position = c(.85, .905)) +
+  theme(legend.position = c(.8, .8)) +
   theme(axis.line.x=element_line(size = 1),
         axis.line.y=element_line(size = 1))+
   theme(text = element_text(size=12)) +
   ylab("Reaction Time") +
-  xlab("Trials completed") +
-  ylim(c(0, 1000)) +
+  xlab("Trials") +
+#  ylim(c(0, 1000)) +
   #expand_limits(y=c(150, 600)) + 
   theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
+
+
+## violin plot
+#install.packages('ggpubr')
+
+
+# Add p-values comparing groups
+# Specify the comparisons you want
+my_comparisons <- list(c("Anticipated black","Anticipated white" ), c("Unexpected black", "Unexpected white"))
+
+rdmm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "subid", "predict")) # 
+
+## violin plot
+library(ggplot2)
+theme_set(
+  theme_classic() +
+    theme(legend.position = "top")
+)
+
+
+# Initiate a ggplot
+e <- ggplot(rdmm, aes(x = cond, y = as.numeric(ReactionTime)))
+
+e + geom_violin(aes(color = predict), trim = FALSE, position = position_dodge(0.9), lwd = 1.2) +
+  geom_boxplot(aes(color = predict), width = 0.2, position = position_dodge(0.9)) +
+  scale_color_manual(values = c("#E7B800","#00AFBB"))+
+  theme(legend.title = element_blank()) +
+  theme(axis.line.x=element_blank(),
+        axis.line.y=element_blank())+
+  xlab(" ")+
+  ylab("Reaction Time (ms)")+
+  theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
+  theme(axis.text.x = element_text(size="12")) +
+  theme(text = element_text(size=12)) 
+
+# ANOVA
+
+rdmm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "subid", "predict", "bgcol")) # 
+
+ezANOVA(rdmm, dv=ReactionTime, wid=subid, within=.(predict, bgcol),  type=3, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
+
 
 # lmer
 cat(inverse("Fitting Linerar Mixed-Effects Models\n"))
 
 library(lmerTest)
 #fit <- lmer(ReactionTime ~ WhichStim + condition + KeyOrder + EST + gender + subage + (1|subid), data=all_data)
-fit <- lmer(ReactionTime ~ as.factor(WhichStim) + as.factor(WhichCue) + (1|subid), data=all_data)
+
+fit <- lmer(ReactionTime ~ as.factor(bgcol) * as.factor(predict) + (1|subid),
+            data=all_data)
 
 
 summary(fit)
@@ -157,9 +201,13 @@ library(sjPlot)
 cat(inverse("Forest-plot of standardized beta values...\n"))
 plot_model(fit, type = c("eff"))
 
+plot_model(fit, type = c("std"))
+
 
 cat(inverse("Comparison between predicted compared to non-predicted...\n"))
 pairwise.t.test(all_data$ReactionTime, all_data$condition, p.adjust.method="BH", paired=F)
+
+pairwise.t.test(rdmm$ReactionTime, rdmm$cond, p.adjust.method="BH", paired=F)
 
 cat(inverse("Comparison between men and women...\n"))
 pairwise.t.test(all_data$ReactionTime, all_data$gender, p.adjust.method="BH", paired=F)
@@ -195,21 +243,27 @@ pupind <- grep('window',names(all_data)); names(all_data)[pupind] <- "pupilMean"
 all_data$winCat <- NULL
 
 for (ij in 1:nrow(all_data)) {
-ifelse(all_data$timeWindow[ij] < 11, all_data$winCat[ij] <- 'before event', all_data$winCat[ij] <- 'after event')
-  }
+ifelse(all_data$timeWindow[ij] < 3800, all_data$winCat[ij] <- 'before event', all_data$winCat[ij] <- 'after event')
+}
+
+#all_data <- subset(all_data, winCat == 'before event')
 
 cat(inverse("Taking condition averages and plotting...\n"))
 
-dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "cond")) # , "subid"
-dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "WhichCue")) # , "subid"
+all_data$cond3 <- paste(all_data$WhichCue, all_data$bgcol)
+
+dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "cond")) # , "pre_post" , "subid"
+#dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "WhichCue")) # , "subid"
+library(wesanderson)
 
 
-ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = WhichCue, color=WhichCue, shape=WhichCue)) + #  , group=subid, color=subid
+ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = cond, color=cond, shape=cond)) + #  , group=subid, color=subid
   geom_errorbar(aes(ymin=pupilMean-ci, ymax=pupilMean+ci), width=.3, size= 1, position=position_dodge(.15)) + 
   geom_line(size=1.8, position=position_dodge(.15)) +
   geom_point(size=3.5, position=position_dodge(.15)) +
   scale_colour_hue(l=40)  + 
-#  facet_wrap(~ subid) +
+  scale_colour_manual(values = wes_palette("Royal1",4,"discrete")) +
+  # facet_wrap(~ subid, scales = "free_y") +
   theme_bw()+
   theme(
     plot.background = element_blank()
@@ -219,35 +273,63 @@ ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = WhichCue, color=WhichCue, sh
   theme(axis.ticks = element_line(size = 2), 
         legend.text = element_text(size = 12)) +
   theme(legend.title=element_blank()) +
-  theme(legend.position = c(.90, .20)) +
+  theme(legend.position = c(.80, .80)) +
   theme(axis.line.x=element_line(size = 1),
         axis.line.y=element_line(size = 1))+
+  expand_limits(x=c(1, 23)) +
   # ggtitle("Predictor type and RT") +
   theme(text = element_text(size=12)) +
-  ylab("Pupil Change") +
+#  ylab("Pupil Size (arbitrary units)") +
+  ylab(" ") +
   xlab("Analysis Windows") +
-  theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
+  theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) + # 30
   theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0))
+
+# Make the plot
+ggplot(data=dfpm, aes(x=timeWindow, y=pupilMean, ymin=pupilMean-ci, ymax=pupilMean+ci, fill=cond, linetype=cond)) + 
+  geom_line() + 
+  geom_ribbon(alpha=0.85) + 
+  scale_fill_manual(values = wes_palette("Royal1",4,"discrete")) +
+theme_bw()+
+  theme(
+    plot.background = element_blank()
+    ,panel.grid.minor = element_blank()
+    ,panel.border = element_blank()
+  ) +
+  theme(axis.ticks = element_line(size = 2), 
+        legend.text = element_text(size = 12)) +
+  theme(legend.title=element_blank()) +
+  theme(legend.position = c(.8, .80)) +
+  theme(axis.line.x=element_line(size = 1),
+        axis.line.y=element_line(size = 1))+
+  expand_limits(x=c(1, 8500)) +
+  # ggtitle("Predictor type and RT") +
+  theme(text = element_text(size=12)) +
+  ylab("Pupil Size (arbitrary units)") +
+  #  ylab(" ") +
+  xlab("Time (ms)") +
+  theme(axis.text.y = element_text(size="12", angle = 0, hjust = 0)) +
+  theme(axis.text.x = element_text(size="12", angle = 0, hjust = 0)) 
+ 
 
 # lmer
 
-all_data <- subset(all_data, winCat == "before event")
+#all_data <- subset(all_data, winCat == "before event")
 
 #all_data$timeWindow <- as.numeric(all_data$timeWindow)
 #all_data <- subset(all_data, timeWindow < 13)
-#all_data$timeWindow <- as.factor(all_data$timeWindow)
+all_data$timeWindow <- as.factor(all_data$timeWindow)
 
 library(lmerTest)
-fit <- lmer(pupilMean ~ bgcol * predict * pre_post * timeWindow +  (1|subid) + (1|baseline), 
+fit <- lmer(pupilMean ~ bgcol * predict * timeWindow * pre_post + (1|subid) + (1|baseline), 
             data=all_data %>% mutate(pre_post = relevel(pre_post, "pre")))
 
-#fit <- lmer(pupilMean ~  bgcol * predict * pre_post2 * timeWindow +  (1|subid) + (1|baseline), 
-#            data=all_data )
+fit <- lmer(pupilMean ~ bgcol * predict:timeWindow + (1|subid) + (1|baseline))
 
 
 summary(fit)
 
-plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol", "pre_post", "predict"))
+plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict")) # , "bgcol","predict"
 #plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol", "pre_post2", "predict"))
 
 
@@ -259,9 +341,11 @@ plot_model(fit, type = c("std"))
 
 # ezANOVA
 
-ezANOVA(all_data, dv=pupilMean, wid=subid, within=.(timeWindow, predict, pre_post, bgcol),  type=3, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
 
+#dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "bgcol", "predict", "subid")) # , "pre_post" , "subid"
+#ezANOVA(dfpm, dv=pupilMean, wid=subid, within=.(timeWindow, bgcol, predict, bgcol),  type=1, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
 
-pairwise.t.test(all_data$pupilMean, all_data$WhichStim, p.adjust.method="BH", paired=F)
-pairwise.t.test(all_data$pupilMean, all_data$cond, p.adjust.method="BH", paired=F)
+#dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("bgcol","cond", "subid")) # , "pre_post" , "subid"
+#pairwise.t.test(dfpm$pupilMean, dfpm$bgcol, p.adjust.method="BH", paired=F)
+#pairwise.t.test(dfpm$pupilMean, dfpm$cond, p.adjust.method="BH", paired=F)
 
