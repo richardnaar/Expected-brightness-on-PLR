@@ -179,7 +179,7 @@ e + geom_violin(aes(color = predict), trim = FALSE, position = position_dodge(0.
 
 # ANOVA
 
-rdmm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "subid", "predict", "bgcol")) # 
+rdmm <- summarySE(all_data, measurevar="ReactionTime", groupvars=c("cond", "subid", "predict", "bgcol","gender")) # 
 
 ezANOVA(rdmm, dv=ReactionTime, wid=subid, within=.(predict, bgcol),  type=3, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
 
@@ -205,12 +205,12 @@ plot_model(fit, type = c("std"))
 
 
 cat(inverse("Comparison between predicted compared to non-predicted...\n"))
-pairwise.t.test(all_data$ReactionTime, all_data$condition, p.adjust.method="BH", paired=F)
 
-pairwise.t.test(rdmm$ReactionTime, rdmm$cond, p.adjust.method="BH", paired=F)
+pairwise.t.test(rdmm$ReactionTime, rdmm$cond, p.adjust.method="BH", paired=T)
+
 
 cat(inverse("Comparison between men and women...\n"))
-pairwise.t.test(all_data$ReactionTime, all_data$gender, p.adjust.method="BH", paired=F)
+pairwise.t.test(rdmm$ReactionTime, rdmm$gender, p.adjust.method="BH", paired=F)
 
 
 cat(inverse("Coputing averages over age and plotting...\n"))
@@ -321,23 +321,36 @@ theme_bw()+
 all_data$timeWindow <- as.factor(all_data$timeWindow)
 
 library(lmerTest)
+
+contrasts(all_data$pre_post) = contr.sum(2)
+contrasts(all_data$bgcol) = contr.sum(2)
+contrasts(all_data$predict) = contr.sum(2)
+contrasts(all_data$timeWindow) = contr.sum(20)
+
+
 fit <- lmer(pupilMean ~ bgcol * predict * timeWindow * pre_post + (1|subid) + (1|baseline), 
-            data=all_data %>% mutate(pre_post = relevel(pre_post, "pre")))
-
-fit <- lmer(pupilMean ~ bgcol * predict:timeWindow + (1|subid) + (1|baseline))
-
+            data=all_data ) # %>% mutate(pre_post = relevel(pre_post, "pre"))
 
 summary(fit)
 
 plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict")) # , "bgcol","predict"
 #plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol", "pre_post2", "predict"))
 
+#install.packages('sjPlot')
+library(sjPlot)
 
+tab <- tab_model(fit)
 
-#library(sjPlot)
 
 cat(inverse("Forest-plot of standardized beta values...\n"))
 plot_model(fit, type = c("std"))
+
+#install.packages("rstanarm")
+#library(rstanarm)
+
+#m <- stan_glm(pupilMean ~ bgcol + predict + timeWindow + pre_post, data = all_data, chains = 1)
+#plot_model(m)
+
 
 # ezANOVA
 
