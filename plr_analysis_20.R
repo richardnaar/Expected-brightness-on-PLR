@@ -35,7 +35,7 @@ for (ij in 1:length(rd$subid)) {
 }
 
 # coercing columns (subid, trialNumber) to factors
-cols = c("subid","trialNumber"); inds = which(colnames(rd)%in%cols); rd[inds] <- lapply(rd[inds], factor)
+cols = c("subid","trialNumber", "bgcol", "predict", "pre_post"); inds = which(colnames(rd)%in%cols); rd[inds] <- lapply(rd[inds], factor)
 inds = which(colnames(pupil_data)%in%cols); pupil_data[inds] <- lapply(pupil_data[inds], factor)
 
 cat(inverse("Merging pupil data with RT data...\n"))
@@ -331,6 +331,11 @@ contrasts(all_data$timeWindow) = contr.sum(20)
 fit <- lmer(pupilMean ~ bgcol * predict * timeWindow * pre_post + (1|subid) + (1|baseline), 
             data=all_data ) # %>% mutate(pre_post = relevel(pre_post, "pre"))
 
+fit <- lmer(pupilMean ~ bgcol + predict + (1|subid) + (1|baseline), 
+            data=all_data ) # %>% mutate(pre_post = relevel(pre_post, "pre"))
+
+
+
 summary(fit)
 
 plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict")) # , "bgcol","predict"
@@ -339,7 +344,7 @@ plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict")) # , 
 #install.packages('sjPlot')
 library(sjPlot)
 
-tab <- tab_model(fit)
+tab <- tab_model(fit, show.std = T, p.adjust = "BH")
 
 
 cat(inverse("Forest-plot of standardized beta values...\n"))
@@ -361,4 +366,3 @@ plot_model(fit, type = c("std"))
 #dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("bgcol","cond", "subid")) # , "pre_post" , "subid"
 #pairwise.t.test(dfpm$pupilMean, dfpm$bgcol, p.adjust.method="BH", paired=F)
 #pairwise.t.test(dfpm$pupilMean, dfpm$cond, p.adjust.method="BH", paired=F)
-
