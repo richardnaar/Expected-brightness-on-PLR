@@ -129,7 +129,7 @@ ggplot(rdm, aes(x=trialprog, y=ReactionTime, group = cond, color=cond)) + #  , g
     ,panel.grid.minor = element_blank()
     ,panel.border = element_blank()
   ) +
-  theme(axis.ticks = element_line(size = 2), 
+  theme(axis.ticks = element_line(size = 1), 
         legend.text = element_text(size = 12)) +
   theme(legend.title=element_blank()) +
   theme(legend.position = c(.8, .8)) +
@@ -148,7 +148,7 @@ ggplot(rdm, aes(x=trialprog, y=ReactionTime, group = cond, color=cond)) + #  , g
 #install.packages('ggpubr')
 
 
-# Add p-values comparing groups
+# Add p-values comparing groupss
 # Specify the comparisons you want
 my_comparisons <- list(c("Anticipated black","Anticipated white" ), c("Unexpected black", "Unexpected white"))
 
@@ -195,7 +195,6 @@ fit <- lmer(ReactionTime ~ as.factor(bgcol) * as.factor(predict) + (1|subid),
 
 
 summary(fit)
-
 library(sjPlot)
 
 cat(inverse("Forest-plot of standardized beta values...\n"))
@@ -270,7 +269,7 @@ ggplot(dfpm, aes(x=timeWindow, y=pupilMean, group = cond, color=cond, shape=cond
     ,panel.grid.minor = element_blank()
     ,panel.border = element_blank()
   ) +
-  theme(axis.ticks = element_line(size = 2), 
+  theme(axis.ticks = element_line(size = 1), 
         legend.text = element_text(size = 12)) +
   theme(legend.title=element_blank()) +
   theme(legend.position = c(.80, .80)) +
@@ -322,10 +321,10 @@ all_data$timeWindow <- as.factor(all_data$timeWindow)
 
 library(lmerTest)
 
-contrasts(all_data$pre_post) = contr.sum(2)
-contrasts(all_data$bgcol) = contr.sum(2)
-contrasts(all_data$predict) = contr.sum(2)
-contrasts(all_data$timeWindow) = contr.sum(20)
+#contrasts(all_data$pre_post) = contr.sum(2)
+#contrasts(all_data$bgcol) = contr.sum(2)
+#contrasts(all_data$predict) = contr.sum(2)
+#contrasts(all_data$timeWindow) = contr.sum(20)
 
 
 fit <- lmer(pupilMean ~ bgcol * predict * timeWindow * pre_post + (1|subid) + (1|baseline), 
@@ -335,16 +334,17 @@ fit <- lmer(pupilMean ~ bgcol + predict + (1|subid) + (1|baseline),
             data=all_data ) # %>% mutate(pre_post = relevel(pre_post, "pre"))
 
 
-
 summary(fit)
 
-plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict")) # , "bgcol","predict"
+library(sjPlot)
+
+plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol",  "predict", "pre_post")) # , "bgcol","predict"
 #plot_model(fit, type = "eff", terms = c("timeWindow", "bgcol", "pre_post2", "predict"))
 
 #install.packages('sjPlot')
-library(sjPlot)
 
-tab <- tab_model(fit, show.std = T, p.adjust = "BH")
+
+tab_model(fit, show.std = T, p.adjust = "BH")
 
 
 cat(inverse("Forest-plot of standardized beta values...\n"))
@@ -360,9 +360,25 @@ plot_model(fit, type = c("std"))
 # ezANOVA
 
 
-#dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "bgcol", "predict", "subid")) # , "pre_post" , "subid"
-#ezANOVA(dfpm, dv=pupilMean, wid=subid, within=.(timeWindow, bgcol, predict, bgcol),  type=1, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
+# dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("timeWindow", "bgcol", "predict", "subid")) # , "pre_post" , "subid"
+# ezANOVA(dfpm, dv=pupilMean, wid=subid, within=.(timeWindow, bgcol, predict, bgcol),  type=1, detailed = T) # , within_full = .(timeWindow, predict, pre_post, WhichStim)
 
 #dfpm <- summarySE(all_data, measurevar="pupilMean", groupvars=c("bgcol","cond", "subid")) # , "pre_post" , "subid"
 #pairwise.t.test(dfpm$pupilMean, dfpm$bgcol, p.adjust.method="BH", paired=F)
 #pairwise.t.test(dfpm$pupilMean, dfpm$cond, p.adjust.method="BH", paired=F)
+
+
+# load required packages
+library(sjPlot)
+library(lme4)
+data("sleepstudy")
+data("efc")
+efc$cluster <- as.factor(efc$e15relat)
+
+m1 <- lmer(neg_c_7 ~ c160age + c161sex + e42dep + (1 | cluster), data = efc)
+m2 <- lmer(Reaction ~ Days + (1 + Days | Subject), data = sleepstudy)
+
+tab_model(m1, m2)
+
+# traceback()
+# options(error = recover)
